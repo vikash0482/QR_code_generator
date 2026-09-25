@@ -1,39 +1,50 @@
-/* 
-1. Use the inquirer npm package to get user input.
-
-2. Use the qr-image npm package to turn the user entered URL into a QR code image.
-3. Create a txt file to save the user input using the native fs node module.
-*/
-import inquirer from 'inquirer';
+import express from "express";
 import qr from "qr-image";
-import fs from "fs";
 
-inquirer
-  .prompt([{message:"Type in URL:",name:"URL"}
-    /* Pass your questions in here */
+const app = express();
+const PORT = process.env.PORT || 3000;
 
-  ])
-  .then((answers) => {
-    const url = answers.URL;
+app.use(express.urlencoded({ extended: true }));
 
-    var qr_svg = qr.image(url);
-    qr_svg.pipe(fs.createWriteStream("qr_img.png"));
- 
-    var svg_string = qr.imageSync('I love QR!', { type: 'svg' });
+app.get("/", (req, res) => {
+  res.send(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>QR Code Generator</title>
+      <style>
+        body {
+          font-family: Arial;
+          text-align: center;
+          padding: 50px;
+          background: #f4f4f4;
+        }
+        input, button {
+          padding: 12px;
+          margin: 10px;
+        }
+      </style>
+    </head>
+    <body>
+      <h1>QR Code Generator</h1>
+      <form action="/generate" method="POST">
+        <input name="url" type="url"
+          placeholder="Enter a URL" required>
+        <button type="submit">Generate QR</button>
+      </form>
+    </body>
+    </html>
+  `);
+});
 
-    fs.writeFile("URL.txt", url, (err) => {
-    if (err) throw err;
-    console.log('The file has been saved!');
-}); 
+app.post("/generate", (req, res) => {
+  const url = req.body.url;
+  const qrImage = qr.image(url, { type: "png" });
 
-    //console.log(answers);
-    // Use user feedback for... whatever!!
-  })
-  .catch((error) => {
-    if (error.isTtyError) {
-      // Prompt couldn't be rendered in the current environment
-    } else {
-      // Something else went wrong
-    }
-  });
+  res.setHeader("Content-Type", "image/png");
+  qrImage.pipe(res);
+});
 
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Server running on port ${PORT}`);
+});
